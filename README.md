@@ -16,12 +16,15 @@ If you would rather not risk it, and use a safer alternative: https://github.com
 ## Previews:
 
 1. Music:
+
 ![Music Preview](assets/preview_music.png)
 
 2. TV Shows:
+
 ![Preview Movie](assets/preview_episode.png)
 
 3. Movies:
+
 ![Preview Movies](assets/preview_movie.png)
 ## Configuration
 
