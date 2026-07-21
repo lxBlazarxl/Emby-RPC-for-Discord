@@ -7,6 +7,8 @@ export const embyWebhookRouter = express.Router();
 let currentPlayingId = null;
 let currentLargeImageId = null;
 let currentlyPaused = false;
+let currentStartTimestamp = null;
+let justAutoPlayed = false;
 
 embyWebhookRouter.post("/emby-status", async (req, res) => {
   try {
@@ -30,15 +32,15 @@ embyWebhookRouter.post("/emby-status", async (req, res) => {
         positionTicks = payload.PlaybackPositionTicks || 0;
       }
       const runTimeTicks = item.RunTimeTicks || 0;
+      const currentEpochMs = Date.now();
+      let positionMs = positionTicks ? Math.floor(positionTicks / 10000) : 0;
+      const runTimeMs = Math.floor(runTimeTicks / 10000);
 
       let isPaused = playbackInfo.IsPaused || false;
       if (event === "playback.pause") {
         if (runTimeTicks) {
-          const positionMs = positionTicks
-            ? Math.floor(positionTicks / 10000)
-            : 0;
-          const runTimeMs = Math.floor(runTimeTicks / 10000);
           if (runTimeMs - positionMs < 10000) {
+            justAutoPlayed = true;
             return res.status(200).send("Ignored fake auto-play pause");
           }
         }
@@ -52,7 +54,16 @@ embyWebhookRouter.post("/emby-status", async (req, res) => {
         itemId === currentPlayingId &&
         isPaused === currentlyPaused
       ) {
-        return res.status(200).send("Ignored (No state change)");
+        if (!isPaused && currentStartTimestamp) {
+          const expectedPositionMs = currentEpochMs - currentStartTimestamp;
+          if (Math.abs(expectedPositionMs - positionMs) > 10000) {
+            // Position drifted significantly (e.g. seeking or fixing auto-play bad position)
+          } else {
+            return res.status(200).send("Ignored (No state change)");
+          }
+        } else {
+          return res.status(200).send("Ignored (No state change)");
+        }
       }
 
       currentlyPaused = isPaused;
@@ -61,23 +72,28 @@ embyWebhookRouter.post("/emby-status", async (req, res) => {
         currentLargeImageId = await fetchAndUploadPoster(item);
         currentPlayingId = itemId;
 
-        if (event === "playback.progress") {
+        const itemType = item.Type || "Unknown";
+        if (
+          justAutoPlayed ||
+          ["Audio", "Track"].includes(itemType) ||
+          event === "playback.progress" || 
+          (event === "playback.start" && runTimeMs > 0 && positionMs >= runTimeMs - 5000)
+        ) {
           positionTicks = 0;
+          positionMs = 0;
         }
+        justAutoPlayed = false;
+      } else {
+        justAutoPlayed = false;
       }
 
       let startTimestamp = null;
       let endTimestamp = null;
 
       if (!isPaused && runTimeTicks) {
-        const currentEpochMs = Date.now();
-        const positionMs = positionTicks
-          ? Math.floor(positionTicks / 10000)
-          : 0;
-        const runTimeMs = Math.floor(runTimeTicks / 10000);
-
         startTimestamp = currentEpochMs - positionMs;
         endTimestamp = currentEpochMs - positionMs + runTimeMs;
+        currentStartTimestamp = startTimestamp;
       }
 
       const embyIconId = await getEmbyIconId();
