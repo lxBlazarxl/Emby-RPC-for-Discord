@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
+import crypto from "crypto";
 import sharp from "sharp";
 import { config } from "../config.js";
 
@@ -17,25 +18,29 @@ export async function getEmbyIconId() {
 
   try {
     const resp = await fetch(assetsUrl, { headers });
+    let assetsList = [];
     if (resp.ok) {
-      const assetsList = await resp.json();
-      for (const asset of assetsList) {
-        const name = asset.name || "";
-        if (
-          name.toLowerCase().includes("emby") &&
-          !name.startsWith("emby_song")
-        ) {
-          await fetch(`${assetsUrl}/${asset.id}`, {
-            method: "DELETE",
-            headers,
-          });
-        }
-      }
+      assetsList = await resp.json();
     }
 
     const iconPath = path.join(__dirname, "../../assets/emby.png");
     if (fs.existsSync(iconPath)) {
       let iconBuffer = fs.readFileSync(iconPath);
+      const hash = crypto.createHash("md5").update(iconBuffer).digest("hex").substring(0, 10);
+      const expectedName = `emby_icon_${hash}`;
+
+      for (const asset of assetsList) {
+        if (asset.name === expectedName) {
+          EMBY_ICON_ID = String(asset.id);
+          return EMBY_ICON_ID;
+        }
+      }
+
+      for (const asset of assetsList) {
+        if ((asset.name || "").startsWith("emby_icon_")) {
+          await fetch(`${assetsUrl}/${asset.id}`, { method: "DELETE", headers });
+        }
+      }
 
       const image = sharp(iconBuffer);
       const metadata = await image.metadata();
@@ -49,9 +54,8 @@ export async function getEmbyIconId() {
         .toBuffer();
 
       const b64Image = iconBuffer.toString("base64");
-      const uniqueName = `emby_icon_${Math.floor(Date.now() / 1000)}`;
       const payload = {
-        name: uniqueName,
+        name: expectedName,
         type: 1,
         image: `data:image/png;base64,${b64Image}`,
       };

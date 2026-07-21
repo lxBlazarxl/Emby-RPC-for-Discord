@@ -57,7 +57,6 @@ embyWebhookRouter.post("/emby-status", async (req, res) => {
         if (!isPaused && currentStartTimestamp) {
           const expectedPositionMs = currentEpochMs - currentStartTimestamp;
           if (Math.abs(expectedPositionMs - positionMs) > 10000) {
-            // Position drifted significantly (e.g. seeking or fixing auto-play bad position)
           } else {
             return res.status(200).send("Ignored (No state change)");
           }
@@ -98,13 +97,15 @@ embyWebhookRouter.post("/emby-status", async (req, res) => {
 
       const embyIconId = await getEmbyIconId();
 
-      const assets = {
-        small_image: embyIconId,
-        small_text: "Emby - Selfhosted Media",
-      };
+      const assets = {};
 
       if (currentLargeImageId) {
         assets.large_image = currentLargeImageId;
+        assets.small_image = embyIconId;
+        assets.small_text = "Emby - Selfhosted Media";
+      } else {
+        assets.large_image = embyIconId;
+        assets.large_text = "Emby - Selfhosted Media";
       }
 
       const itemType = item.Type || "Unknown";

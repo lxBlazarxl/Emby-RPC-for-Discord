@@ -10,7 +10,6 @@ app.use("/", embyWebhookRouter);
 
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
-  // Clear any stuck presences from old scripts or previous crashes
   client.user.setActivity(null);
 });
 
