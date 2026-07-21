@@ -1,7 +1,10 @@
 # Emby-RPC
 
 > [!CAUTION]
-> **USE AT YOUR OWN RISK**: This is a self-botting script, which is **STRICTLY AGAINST** Discord's ToS. This may lead to your account being suspended or outright terminated. Also, **NEVER SHARE** your personal user token with anyone. If your account gets terminated, its not my responsibility.
+> **USE AT YOUR OWN RISK**: This is a self-botting script, which is **STRICTLY AGAINST** Discord's ToS. This may lead to your account being suspended or outright terminated. Also, **NEVER SHARE** your personal user token with anyone.
+
+> [!WARNING]
+> If your account gets suspended or terminated, it is not my responsibility.
 
 This is a Discord Rich Presence Client for Emby. It automatically displays exactly what you're watching (or listening to) on your personal Discord profile using Rich Presence. This script is for headless environments, where your Emby server is located.
 
